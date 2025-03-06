@@ -56,7 +56,7 @@ else:
     print("❌ Gagal mengirim log:", response.json())
 
 # === NOTIFIKASI DI BLENDER ===
-def show_message(message, title="Blender Log", icon='INFO'):
+def show_message(message, title="Blender:", icon='INFO'):
     def draw(self, context):
         self.layout.label(text=message)
 
