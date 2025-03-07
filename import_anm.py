@@ -15,7 +15,7 @@ def load_videos_from_path(path):
     
     if os.path.exists(path) and os.path.isdir(path):
         for file in os.listdir(path):
-            if file.lower().endswith(('.mp4', '.avi', '.mkv', '.mov')):
+            if file.lower().endswith(('.mp4', '.avi', '.mkv', '.mov', '.png')):
                 _video_paths.append((file, file, "", load_preview_icon(os.path.join(path, file))))
 
 # Function to load a preview icon
@@ -41,18 +41,41 @@ def sna_update_custom_path(self, context):
 class WM_OT_PlayVideo(bpy.types.Operator):
     bl_idname = "wm.play_video"
     bl_label = "Play Video"
-    bl_description = "Play the selected video using the default video player"
-    
+    bl_description = "Play the selected video or find a video in the 'preview' folder with the same name as the selected image"
+
     def execute(self, context):
-        selected_video = context.scene.sna_videos
+        selected_file = context.scene.sna_videos
         custom_path = context.scene.sna_custom_path
-        video_path = os.path.join(custom_path, selected_video)
-        
-        if os.name == 'nt':
-            os.startfile(video_path)
+        file_path = os.path.join(custom_path, selected_file)
+
+        # Check if the selected file is a video
+        if selected_file.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')):
+            if os.name == 'nt':
+                os.startfile(file_path)
+            else:
+                self.report({'ERROR'}, "This addon only works on Windows.")
+            return {'FINISHED'}
+
+        # Check if the selected file is an image
+        elif selected_file.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+            preview_folder = os.path.join(custom_path, 'preview')
+            if os.path.exists(preview_folder):
+                video_name = os.path.splitext(selected_file)[0]  # Remove the image extension
+                for video_ext in ['.mp4', '.avi', '.mov', '.mkv']:
+                    video_path = os.path.join(preview_folder, video_name + video_ext)
+                    if os.path.exists(video_path):
+                        if os.name == 'nt':
+                            os.startfile(video_path)
+                        else:
+                            self.report({'ERROR'}, "This addon only works on Windows.")
+                        return {'FINISHED'}
+
+                self.report({'WARNING'}, f"No video found in 'preview' folder with the name '{video_name}'.")
+            else:
+                self.report({'WARNING'}, "No 'preview' folder found.")
         else:
-            self.report({'ERROR'}, "This addon only works on Windows.")
-        
+            self.report({'ERROR'}, "Selected file is neither a video nor an image.")
+
         return {'FINISHED'}
 
 # Operator to refresh the video list
@@ -76,12 +99,14 @@ class WM_OT_RefreshList(bpy.types.Operator):
 class WM_OT_ImportAnimation(bpy.types.Operator):
     bl_idname = "wm.import_animation"
     bl_label = "Import Animation"
-    bl_description = "Import animation data from the selected video's script"
+    bl_description = "Import animation data from the selected video or image's script"
     
     def execute(self, context):
-        selected_video = context.scene.sna_videos
+        selected_file = context.scene.sna_videos  # Assuming this can be a video or image
         custom_path = context.scene.sna_custom_path
-        video_name = os.path.splitext(selected_video)[0]
+        
+        # Extract the file name without extension
+        file_name = os.path.splitext(selected_file)[0]
         
         # Path to ANIM_DATA folder
         anim_data_dir = os.path.join(custom_path, "ANIM_DATA")
@@ -91,7 +116,7 @@ class WM_OT_ImportAnimation(bpy.types.Operator):
             return {'CANCELLED'}
         
         # Path to script file
-        script_filepath = os.path.join(anim_data_dir, f"{video_name}.py")
+        script_filepath = os.path.join(anim_data_dir, f"{file_name}.py")
         
         if not os.path.exists(script_filepath):
             self.report({'ERROR'}, f"Script file {os.path.basename(script_filepath)} not found in: {anim_data_dir}")
@@ -205,7 +230,75 @@ class WM_OT_DeleteVideo(bpy.types.Operator):
         load_videos_from_path(custom_path)
         
         return {'FINISHED'}
+#===================================== Rename ==================================
 
+# Operator untuk menampilkan popup rename
+class WM_OT_RenameVideo(bpy.types.Operator):
+    bl_idname = "wm.rename_video"
+    bl_label = "Rename Video/Image"
+    bl_description = "Rename the selected video/image and update corresponding files in ANIM_DATA and preview folders"
+
+    new_name: StringProperty(name="New Name", description="New name for the file (without extension)")
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        selected_file = context.scene.sna_videos
+        custom_path = context.scene.sna_custom_path
+        file_path = os.path.join(custom_path, selected_file)
+        file_name, file_ext = os.path.splitext(selected_file)
+
+        # Validasi nama baru
+        if not self.new_name:
+            self.report({'ERROR'}, "New name cannot be empty.")
+            return {'CANCELLED'}
+
+        # Path baru untuk file utama
+        new_file_path = os.path.join(custom_path, self.new_name + file_ext)
+
+        # Rename file utama
+        if os.path.exists(file_path):
+            try:
+                os.rename(file_path, new_file_path)
+                self.report({'INFO'}, f"Renamed {selected_file} to {self.new_name + file_ext}.")
+            except Exception as e:
+                self.report({'ERROR'}, f"Failed to rename file: {e}")
+                return {'CANCELLED'}
+        else:
+            self.report({'ERROR'}, f"File {selected_file} not found.")
+            return {'CANCELLED'}
+
+        # Rename script di ANIM_DATA
+        anim_data_dir = os.path.join(custom_path, "ANIM_DATA")
+        old_script_path = os.path.join(anim_data_dir, f"{file_name}.py")
+        new_script_path = os.path.join(anim_data_dir, f"{self.new_name}.py")
+
+        if os.path.exists(old_script_path):
+            try:
+                os.rename(old_script_path, new_script_path)
+                self.report({'INFO'}, f"Renamed script {file_name}.py to {self.new_name}.py.")
+            except Exception as e:
+                self.report({'ERROR'}, f"Failed to rename script: {e}")
+
+        # Rename file di folder preview
+        preview_folder = os.path.join(custom_path, "preview")
+        if os.path.exists(preview_folder):
+            for preview_file in os.listdir(preview_folder):
+                if preview_file.startswith(file_name):
+                    old_preview_path = os.path.join(preview_folder, preview_file)
+                    new_preview_path = os.path.join(preview_folder, preview_file.replace(file_name, self.new_name))
+                    try:
+                        os.rename(old_preview_path, new_preview_path)
+                        self.report({'INFO'}, f"Renamed preview file {preview_file}.")
+                    except Exception as e:
+                        self.report({'ERROR'}, f"Failed to rename preview file: {e}")
+
+        # Refresh list
+        load_videos_from_path(custom_path)
+
+        return {'FINISHED'}
+    
 # Panel class
 class VIDEO_PT_Browser(bpy.types.Panel):
     bl_label = "Import Animation"
@@ -215,6 +308,7 @@ class VIDEO_PT_Browser(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
+        layout.label(text="Animation Library")
         layout.prop(context.scene, 'sna_custom_path', text="Folder")
         
         layout.template_icon_view(context.scene, 'sna_videos', show_labels=True, scale=5.0, scale_popup=5.0)
@@ -222,13 +316,14 @@ class VIDEO_PT_Browser(bpy.types.Panel):
 #        row.operator("wm.refresh_list", text="REFRESH", icon='FILE_REFRESH')         
 #        if context.scene.sna_videos:
         row = layout.row()
-        row.operator("wm.refresh_list", text="Refresh List", icon='FILE_REFRESH')
+        row.operator("wm.refresh_list", text="", icon='FILE_REFRESH')
+        row.operator("wm.select_bones_from_script", text="Selected")    
+        row.operator("wm.delete_video", text="", icon='TRASH')            
         row = layout.row()                     
         row.operator("wm.play_video", text="Preview", icon='PLAY')
         row.operator("wm.import_animation", text="Import ANM")
-        row = layout.row()             
-        row.operator("wm.select_bones_from_script", text="Selected")
-        row.operator("wm.delete_video", text="Delete", icon='TRASH')
+        row = layout.row()  
+        row.operator("wm.rename_video", text="Rename", icon='SORTALPHA')                   
         row = layout.row()          
         row.operator("floating.open_save_animation", text="Save Animation")        
 
@@ -250,7 +345,8 @@ def register():
         description="List of videos in the selected folder",
         items=sna_videos_enum_items
     )
-    
+ 
+    bpy.utils.register_class(WM_OT_RenameVideo)   
     bpy.utils.register_class(WM_OT_PlayVideo)
     bpy.utils.register_class(WM_OT_ImportAnimation)
     bpy.utils.register_class(WM_OT_SelectBonesFromScript)
@@ -266,6 +362,7 @@ def unregister():
     del bpy.types.Scene.sna_custom_path
     del bpy.types.Scene.sna_videos
     
+    bpy.utils.unregister_class(WM_OT_RenameVideo)    
     bpy.utils.unregister_class(VIDEO_PT_Browser)
     bpy.utils.unregister_class(WM_OT_DeleteVideo)
     bpy.utils.unregister_class(WM_OT_SelectBonesFromScript)
