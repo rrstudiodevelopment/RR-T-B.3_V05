@@ -196,6 +196,23 @@ class RahaBackwardAnimationBackwardAnimation(bpy.types.Operator):
                 self.report({'INFO'}, "Backward animation applied.")
         return {'FINISHED'}
 
+class RahaBoneBakePanel(bpy.types.Panel):
+    """Panel untuk menyimpan dan menerapkan matrix bone dalam world space"""
+    bl_label = "smart bake"
+    bl_idname = "OBJECT_PT_bone_bake"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'WINDOW'    
+    bl_ui_units_x = 10
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene       
+        layout.label(text="Bake and delete Constraint")                      
+        layout.prop(scene, "start_frame")
+        layout.prop(scene, "end_frame")       
+        layout.operator("object.smart_bake", text="SMART BAKE ANIMATION") 
+
+        
 class RahaBoneMatrixPanel(bpy.types.Panel):
     """Panel untuk menyimpan dan menerapkan matrix bone dalam world space"""
     bl_label = "Fake constraint N step snap : raha tools"
@@ -213,19 +230,16 @@ class RahaBoneMatrixPanel(bpy.types.Panel):
          
         
         layout.separator()  
-        layout.label(text="Frame range for step-snap And Bake")                       
+        layout.label(text="Step Snap")                       
         layout.prop(scene, "start_frame")
-        layout.prop(scene, "end_frame")
-        layout.label(text="Bake and delete Constraint")        
-        layout.operator("object.smart_bake", text="SMART BAKE ANIMATION") 
-        layout.label(text="Step-snap")                  
+        layout.prop(scene, "end_frame")                
         row = layout.row()
         
         row.operator("object.forward_animation", text="Forward", icon='TRIA_RIGHT')
         row.operator("object.backward_animation", text="Backward", icon='TRIA_LEFT')     
         
 
-classes = [RahaSaveBoneMatrix, RahaApplyBoneMatrix, RahaForwardAnimation, RahaBackwardAnimationBackwardAnimation, RahaSmartBake, RahaBoneMatrixPanel]
+classes = [RahaSaveBoneMatrix, RahaApplyBoneMatrix, RahaForwardAnimation, RahaBackwardAnimationBackwardAnimation, RahaSmartBake, RahaBoneMatrixPanel,RahaBoneBakePanel]
 
 def register():
     for cls in classes:
