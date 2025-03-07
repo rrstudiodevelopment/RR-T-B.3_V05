@@ -2,6 +2,69 @@ import bpy
 import os
 import subprocess
 
+from bpy.props import StringProperty
+from bpy_extras.io_utils import ImportHelper
+
+
+class AUDIO_OT_import(bpy.types.Operator, ImportHelper):
+    """Import an audio file and set its start position"""
+    bl_idname = "audio.import"
+    bl_label = "Add Audio"
+    
+    filter_glob: StringProperty(
+        default="*.wav;*.mp3;*.ogg",
+        options={'HIDDEN'}
+    )
+    
+    def execute(self, context):
+        scene = context.scene
+        audio_path = self.filepath
+        
+        # Remove existing sound strips
+        for strip in scene.sequence_editor.sequences_all:
+            if strip.type == 'SOUND':
+                scene.sequence_editor.sequences.remove(strip)
+                
+        # Ensure sequence editor exists
+        if not scene.sequence_editor:
+            scene.sequence_editor_create()
+        
+        # Add the audio strip
+        sound_strip = scene.sequence_editor.sequences.new_sound(
+            name=os.path.basename(audio_path), 
+            filepath=audio_path, 
+            channel=1, 
+            frame_start=scene.frame_start
+        )
+        
+        scene.active_audio_name = sound_strip.name
+        
+        # Activate audio and enable waveform display
+        bpy.context.scene.sequence_editor.active_strip = sound_strip
+        bpy.context.active_sequence_strip.show_waveform = True
+        
+        # Set sync mode to AUDIO_SYNC
+        bpy.context.scene.sync_mode = 'AUDIO_SYNC'
+        
+        return {'FINISHED'}
+
+class AUDIO_OT_delete(bpy.types.Operator):
+    """Delete the imported audio"""
+    bl_idname = "audio.delete"
+    bl_label = "Delete Audio"
+    
+    def execute(self, context):
+        scene = context.scene
+        
+        if scene.sequence_editor:
+            for strip in scene.sequence_editor.sequences_all:
+                if strip.type == 'SOUND':
+                    scene.sequence_editor.sequences.remove(strip)
+                    scene.active_audio_name = "No Audio Imported"
+                    break
+        
+        return {'FINISHED'}
+    
 #================================ HUD ============================================================
 # Mengambil path ke direktori addon
 
@@ -299,7 +362,18 @@ class VIEW3D_PT_PlayblastPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
+#====================================================== Panel Add Audio ===================================
+        # Checkbox untuk mengaktifkan/menonaktifkan HUD
+        layout.prop(scene, "add_audio", text="Add Audio")
 
+        # Jika HUD diaktifkan, tampilkan opsi HUD
+        if scene.add_audio:
+            layout.label(text=f"Active Audio: {scene.active_audio_name}")
+            row = layout.row()
+            row.operator("audio.import", text="Add Audio")
+    #        row.operator("audio.delete", text="Delete Audio")
+            row.operator("audio.delete", text="Delete", icon='TRASH')
+#===================================================== Panel Hud ========================================            
         # Checkbox untuk mengaktifkan/menonaktifkan HUD
         layout.prop(scene, "use_hud", text="Use HUD")
 
@@ -322,27 +396,30 @@ class VIEW3D_PT_PlayblastPanel(bpy.types.Panel):
             row.operator("view3d.toggle_safe_area", text="", icon='HIDE_OFF')  # Icon mata
             row.operator("view3d.delete_safe_area_image", text="", icon='X')  # Icon X
 
-        # Tampilkan opsi Playblast
-        layout.label(text="Playblast ===========")  
-        layout.prop(scene, "playblast_output_path", text="Output Path")
-        layout.prop(scene, "playblast_file_name", text="File Name")
-        
-        # Checkbox untuk menggunakan resolusi sementara
-        layout.prop(scene, "use_temporary_resolution", text="Use Temporary Resolution")
-        if scene.use_temporary_resolution:
-            layout.prop(scene, "temporary_resolution_x", text="Resolution X")
-            layout.prop(scene, "temporary_resolution_y", text="Resolution Y")
-        
-        layout.separator()
-        
-        layout.prop(scene, "use_custom_frame_range", text="Use Custom Frame Range")
-        if scene.use_custom_frame_range:
-            layout.prop(scene, "custom_start_frame", text="Start Frame")
-            layout.prop(scene, "custom_end_frame", text="End Frame")
-        
-        layout.separator()
-        layout.operator("view3d.playblast", text="PLAYBLAST")
-        layout.separator()
+#============================================ Panel Playblast ==============================================
+        layout.prop(scene, "use_pb", text="Use Playblast")
+        if scene.use_pb:  # Tetap gunakan scene.use_pb
+                # Tampilkan opsi Playblast            
+            layout.label(text="Playblast ===========")  
+            layout.prop(scene, "playblast_output_path", text="Output Path")
+            layout.prop(scene, "playblast_file_name", text="File Name")
+            
+            # Checkbox untuk menggunakan resolusi sementara
+            layout.prop(scene, "use_temporary_resolution", text="Use Temporary Resolution")
+            if scene.use_temporary_resolution:
+                layout.prop(scene, "temporary_resolution_x", text="Resolution X")
+                layout.prop(scene, "temporary_resolution_y", text="Resolution Y")
+            
+            layout.separator()
+            
+            layout.prop(scene, "use_custom_frame_range", text="Use Custom Frame Range")
+            if scene.use_custom_frame_range:
+                layout.prop(scene, "custom_start_frame", text="Start Frame")
+                layout.prop(scene, "custom_end_frame", text="End Frame")
+            
+            layout.separator()
+            layout.operator("view3d.playblast", text="PLAYBLAST")
+            layout.separator()
         
 
 classes = [
@@ -350,13 +427,18 @@ classes = [
     VIEW3D_PT_PlayblastPanel,
     RAHA_OT_ActivateHUD,
     VIEW3D_OT_ToggleSafeArea,
+    AUDIO_OT_import,
+    AUDIO_OT_delete,
     VIEW3D_OT_DeleteSafeAreaImage    
 ]
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
-    bpy.types.Scene.use_hud = bpy.props.BoolProperty(name="Use HUD", default=False)  # Default tidak tercentang
+    bpy.types.Scene.active_audio_name = StringProperty(default="No Audio Imported")        
+    bpy.types.Scene.add_audio = bpy.props.BoolProperty(name="Add Audio", default=False)        
+    bpy.types.Scene.use_hud = bpy.props.BoolProperty(name="Use HUD", default=False)
+    bpy.types.Scene.use_pb = bpy.props.BoolProperty(name="Use Playblast", default=False)      # Default tidak tercentang
     bpy.types.Scene.use_custom_safe_area_path = bpy.props.BoolProperty(name="Use Custom Safe Area Path", default=False)
     bpy.types.Scene.custom_safe_area_path = bpy.props.StringProperty(name="Custom Safe Area Path", subtype='FILE_PATH')
     bpy.types.Scene.playblast_output_path = bpy.props.StringProperty(name="Output Path", subtype='DIR_PATH')
@@ -381,7 +463,7 @@ def unregister():
     del bpy.types.Scene.use_custom_frame_range
     del bpy.types.Scene.custom_start_frame
     del bpy.types.Scene.custom_end_frame
-
+    del bpy.types.Scene.active_audio_name
     
 if __name__ == "__main__":
     register()
