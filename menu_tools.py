@@ -1,5 +1,4 @@
 
-
 import bpy
 import webbrowser
 import os
@@ -207,11 +206,11 @@ class RAHA_PT_Tools_For_Animation(bpy.types.Panel):
         layout.label(text="Parent Constraint")         
         row = layout.row()        
         row.operator("floating.open_childof", text="Child-of")
-        row.operator("floating.open_locrote", text="Locrote")   
-       
-        
-        layout = self.layout               
-        layout.operator("floating.open_fake_step", text="Fake-bake-step Snap")
+        row.operator("floating.open_locrote", text="Locrote")  
+               
+        layout = self.layout
+        layout.operator("floating.open_smart_bake", text="Smart Bake")               
+        layout.operator("floating.open_fake_step", text="Fake N Step Snap")
         
 #========================================================================================================================
 
@@ -238,7 +237,8 @@ class RAHA_PT_Tools_For_Animation(bpy.types.Panel):
             row.operator("pose.breakdown_custom", text="0").factor = 0.0
             row.operator("pose.breakdown_custom", text="100").factor = 1.0
 
-        layout.operator("floating.open_pb_hud", text="PLAYBLAST + HUD")  
+        layout.label(text="Audio HUD Playblast")
+        layout.operator("floating.open_pb_hud", text="A   H    P")  
         
         pcoll = preview_collections.get("raha_previews")     
 
@@ -410,7 +410,18 @@ class FLOATING_OT_Open_panel_Locrote(bpy.types.Operator):
     
     def execute(self, context):
         bpy.ops.wm.call_panel(name="VIEW3D_PT_Raha_Parents_Locrote", keep_open=True)  
+
         return {'FINISHED'}          
+
+#========================================= panggil panel Smart Bake =========================== 
+    
+class FLOATING_OT_Open_Smart_Bake(bpy.types.Operator):
+    bl_idname = "floating.open_smart_bake"
+    bl_label = "open_smart_bake"
+    
+    def execute(self, context):
+        bpy.ops.wm.call_panel(name="OBJECT_PT_bone_bake", keep_open=True)  
+        return {'FINISHED'}   
 #========================================= panggil panel Fake constraint - Step Snap =========================== 
     
 class FLOATING_OT_Open_Fake_Step(bpy.types.Operator):
@@ -493,6 +504,7 @@ def register():
     bpy.utils.register_class(FLOATING_OT_Open_panel_Locrote)
 
 #========================== fake constraint dan step snap =============================      
+    bpy.utils.register_class(FLOATING_OT_Open_Smart_Bake )
     bpy.utils.register_class(FLOATING_OT_Open_Fake_Step )    
     
 #========================== FLOATING_OT_Open_Mini_tools =============================      
@@ -531,6 +543,8 @@ def unregister():
     bpy.utils.unregister_class(FLOATING_OT_Open_panel_Locrote)     
     
 #========================== fake constraint dan step snap =============================      
+
+    bpy.utils.unregister_class(FLOATING_OT_Open_Smart_Bake )
     bpy.utils.unregister_class(FLOATING_OT_Open_Fake_Step )
 
 #========================== FLOATING_OT_Open_Mini_tools =============================      
