@@ -122,6 +122,9 @@ def insert_missing_keyframes():
         scene.frame_end = original_end_frame
 #========================================= EKPORT BONE ================================================
 # Fungsi export_bone_keyframe_data tetap sama seperti sebelumnya
+import os
+import bpy
+
 def export_bone_keyframe_data(context, filepath):
     armature_obj = context.object
     if not armature_obj or armature_obj.type != 'ARMATURE':
@@ -143,23 +146,23 @@ def export_bone_keyframe_data(context, filepath):
         
         matched_bones = {}            
 
-        # Tentukan path folder ANIM_DATA
+        # Tentukan path folder ANIM_DATA dan Preview
         base_folder = os.path.dirname(filepath)
         anim_data_folder = os.path.join(base_folder, "ANIM_DATA")
+        preview_folder = os.path.join(base_folder, "Preview")
 
-        # Pastikan folder ANIM_DATA ada
+        # Pastikan folder ANIM_DATA dan Preview ada
         if not os.path.exists(anim_data_folder):
             os.makedirs(anim_data_folder)
+        if not os.path.exists(preview_folder):
+            os.makedirs(preview_folder)
 
-        # Tentukan path untuk file script
+        # Tentukan path untuk file script, video, dan screenshot
         file_name = os.path.splitext(os.path.basename(filepath))[0]
         script_path = os.path.join(anim_data_folder, f"{file_name}.py")
-        playblast_path = os.path.join(base_folder, f"{file_name}.mp4")
+        playblast_path = os.path.join(preview_folder, f"{file_name}.mp4")
+        screenshot_path = os.path.join(base_folder, f"{file_name}.png")
         
-        # Buat folder ANIM_DATA jika belum ada
-        if not os.path.exists(anim_data_folder):
-            os.makedirs(anim_data_folder)    
-
         # Mendapatkan data keyframe dari bone yang dipilih
         bone_data = {}
         for bone in armature_obj.pose.bones:
@@ -331,14 +334,26 @@ def export_bone_keyframe_data(context, filepath):
                 file.write("\n")
                 
         # Playblast viewport dalam format MP4
-        bpy.context.scene.render.use_file_extension = False
         bpy.context.scene.render.filepath = playblast_path
         bpy.context.scene.render.image_settings.file_format = 'FFMPEG'
-        bpy.context.scene.render.ffmpeg.format = 'QUICKTIME'
+        bpy.context.scene.render.ffmpeg.format = 'MPEG4'
         bpy.context.scene.render.ffmpeg.codec = 'H264'
         bpy.context.scene.render.ffmpeg.audio_codec = 'AAC'
-        
-        bpy.ops.render.opengl(animation=True, sequencer=False)
+        bpy.ops.render.opengl(animation=True)  # Render playblast
+
+        # Ambil screenshot dari frame pertama
+        scene.frame_set(scene.frame_start)  # Set frame ke frame pertama
+
+        # Simpan pengaturan format file asli
+        original_file_format = bpy.context.scene.render.image_settings.file_format
+
+        # Set format file ke PNG untuk screenshot
+        bpy.context.scene.render.image_settings.file_format = 'PNG'
+        bpy.context.scene.render.filepath = screenshot_path  # Set filepath untuk screenshot
+        bpy.ops.render.opengl(write_still=True)  # Ambil screenshot
+
+        # Kembalikan format file ke pengaturan asli (untuk playblast)
+        bpy.context.scene.render.image_settings.file_format = original_file_format
         
     finally:
         # Kembalikan nilai asli frame_start dan frame_end
