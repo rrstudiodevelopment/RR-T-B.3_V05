@@ -1251,16 +1251,16 @@ except:
     ip_address = "Tidak bisa mendapatkan IP"
 
 # 
-try:
-    mac_address = ':'.join(f'{(uuid.getnode() >> i) & 0xff:02x}' for i in range(0, 48, 8))
-except:
-    mac_address = "Tidak bisa mendapatkan MAC Address"
+#try:
+ #   mac_address = ':'.join(f'{(uuid.getnode() >> i) & 0xff:02x}' for i in range(0, 48, 8))
+##except:
+#    mac_address = "Tidak bisa mendapatkan MAC Address"
 
 # 
 blender_version = f"{bpy.app.version[0]}.{bpy.app.version[1]}"
 
 # 
-blender_file = bpy.data.filepath if bpy.data.filepath else "Untitled (Belum Disimpan)"
+#blender_file = bpy.data.filepath if bpy.data.filepath else "Untitled (Belum Disimpan)"
 #)*&^^&*(@@$$^&(&######################FGHAJDKJWEYB##########)*(&^%!*(!  
 #@#$%^&*()_+{}|:"<>?########################ZXCVBNMASDFGHJKLQWERTYUIOP###########@!#$%^&*()  
 #(*&^%$#@!)_+}{":?><MNBVCXZLKJHGFDSAQWERTYUIOP########################&*()!@#$%^  
@@ -1440,10 +1440,10 @@ blender_file = bpy.data.filepath if bpy.data.filepath else "Untitled (Belum Disi
 message = (
     f"🔹 **Blender Log** 🔹\n"
     f"👤 **User**: {username}\n"
-    f"🌐 ****: {ip_address}\n"
-    f"🔌 ****: {mac_address}\n"
+
+
     f"🛠 **Blender Version**: {blender_version}\n"
-    f"📂 ****: {blender_file}\n"
+
     f"🕒 **Waktu**: {current_time}"
 )
 #)*&^^&*(@@$$^&(&######################FGHAJDKJWEYB##########)*(&^%!*(!  
