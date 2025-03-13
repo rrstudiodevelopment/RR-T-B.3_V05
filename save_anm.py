@@ -2,8 +2,21 @@ import bpy
 import math
 import os
 
+# Fungsi untuk menampilkan popup informasi===================================================
 
 
+def show_export_success_popup(self, context):
+    layout = self.layout
+    layout.separator()  
+    layout.separator() 
+    layout.label(text="")
+    layout.label(text="Export Animation Sukses!")
+    layout.label(text="")
+    layout.separator()
+#    self.layout.label(text="")
+
+
+    
 # Tambahkan properti ke scene
 bpy.types.Scene.use_custom_frame_range = bpy.props.BoolProperty(
     name="Gunakan Rentang Bingkai Kustom",
@@ -29,6 +42,9 @@ bpy.types.Scene.insert_missing_keyframes = bpy.props.BoolProperty(
     default=False
 )
 
+
+
+    
 #================================ DEF insert_missing_keyframes =============================
 def insert_missing_keyframes():
     obj = bpy.context.active_object
@@ -120,6 +136,11 @@ def insert_missing_keyframes():
         # Kembalikan nilai asli frame_start dan frame_end
         scene.frame_start = original_start_frame
         scene.frame_end = original_end_frame
+        
+#    bpy.context.window_manager.popup_menu(show_export_success_popup, title="Export Animation", icon='INFO')
+            
+    return {'FINISHED'}        
+        
 #========================================= EKPORT BONE ================================================
 # Fungsi export_bone_keyframe_data tetap sama seperti sebelumnya
 import os
@@ -359,6 +380,8 @@ def export_bone_keyframe_data(context, filepath):
         # Kembalikan nilai asli frame_start dan frame_end
         scene.frame_start = original_start_frame
         scene.frame_end = original_end_frame
+
+    bpy.context.window_manager.popup_menu(show_export_success_popup, title="Info", icon='INFO')
             
     return {'FINISHED'}
 
